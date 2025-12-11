@@ -3,79 +3,62 @@ package com.example.monetto
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.border
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.navigation.compose.rememberNavController
 import com.example.monetto.ui.theme.Coral
 import com.example.monetto.ui.theme.colorOliveLight
-import kotlin.math.absoluteValue
 import java.text.SimpleDateFormat
+import java.time.DayOfWeek
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.TemporalAdjusters
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.Calendar
-import kotlin.math.max // Нужен для логики ProgressBar
-import kotlin.math.min // Нужен для логики ProgressBar
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.CardDefaults
-import java.util.concurrent.TimeUnit
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.graphics.toArgb
-import java.time.temporal.ChronoUnit
-import java.time.temporal.Temporal
-import java.time.Instant
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit.*
-import java.time.Duration
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.setValue
-import androidx.compose.foundation.rememberScrollState  // <-- Добавить
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.material.icons.filled.Circle
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.window.Dialog
-import androidx.compose.material.icons.filled.ArrowDropDown
+import kotlin.math.absoluteValue
+import kotlin.math.max
+import kotlin.math.min
 import android.graphics.Color as AndroidColor
 
+// Константы цветов
+private val BackgroundColor = Color(0xFF2E3033)
+private val CardBackground = Color(0xFF3A3B3E)
+private val DividerColor = Color(0xFF545659)
+private val ExpenseColor = Color(0xFFF56C6F)
 
 val GoalColors = mapOf(
-    // 1. Используем AndroidColor.parseColor() для преобразования строки в Int.
-    // 2. Используем Color() для преобразования Int в Compose Color.
     "Blue" to Color(AndroidColor.parseColor("#5F9AE1")),
     "Green" to Color(AndroidColor.parseColor("#6DD18B")),
     "Red" to Color(AndroidColor.parseColor("#FD7778")),
@@ -90,106 +73,151 @@ val GoalIcons = mapOf(
     "Savings" to R.drawable.coins
 )
 
-
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val navController = rememberNavController() // 1. Инициализация контроллера навигации. Он управляет стеком экранов.
+            val navController = rememberNavController()
+            // Создаем ViewModel здесь, чтобы передавать её состояние валюты во все экраны
+            val viewModel: TransactionViewModel = viewModel()
 
-            Scaffold( // 2. Главный макет Scaffold (Каркас): обеспечивает структуру с местом для контента, нижней панелью (bottomBar) и т.д.
-                containerColor = Color(0xFF2E3033), // Установка темно-серого фона для всего приложения.
-                bottomBar = { Footer(navController = navController) } // 3. Установка нижней навигационной панели (футера).
+            Scaffold(
+                containerColor = BackgroundColor,
+                bottomBar = { Footer(navController = navController) }
             ) { innerPadding ->
 
-                NavHost( // 4. Навигационный хост: контейнер, в котором будут отображаться Composable-функции (экраны) в зависимости от текущего маршрута.
+                NavHost(
                     navController = navController,
-                    startDestination = "HomePage", // Установка "HomePage" как первого, стартового экрана.
+                    startDestination = "HomePage",
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding) // 5. Ключевой отступ: предотвращает перекрытие контента нижней панелью (Footer).
+                        .padding(innerPadding)
                 ) {
-                    // Определение маршрутов и Composable-функций для каждого экрана:
-                    composable("HomePage") { AppHomePage(navController = navController) }
-                    composable("TransactionsPage") { AppTransactionsPage(navController = navController) }
-                    composable("ReportsPage") { AppReportsPage(navController = navController) } // Экран отчетов (пока заглушка)
-                    composable("BudgetPage") { AppBudgetPage(navController =navController) } // Экран бюджета (пока заглушка)
+                    composable("HomePage") { AppHomePage(navController = navController, viewModel = viewModel) }
+                    composable("TransactionsPage") { AppTransactionsPage(navController = navController, viewModel = viewModel) }
+                    composable("ReportsPage") { AppReportsPage(navController = navController, viewModel = viewModel) }
+                    composable("BudgetPage") { AppBudgetPage(navController = navController, viewModel = viewModel) }
+                    composable(
+                        route = "GoalDetailPage/{goalId}",
+                        arguments = listOf(androidx.navigation.navArgument("goalId") { type = androidx.navigation.NavType.LongType })
+                    ) { backStackEntry ->
+                        val goalId = backStackEntry.arguments?.getLong("goalId") ?: 0L
+                        GoalDetailPage(navController = navController, goalId = goalId, viewModel = viewModel)
+                    }
                 }
             }
         }
     }
 }
 
+// --- НОВЫЙ КОМПОНЕНТ: Выбор валюты ---
+@Composable
+fun CurrencySelector(viewModel: TransactionViewModel) {
+    val currentCurrency by viewModel.currencyFlow.collectAsState()
+    var expanded by remember { mutableStateOf(false) }
 
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { expanded = true }
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = currentCurrency.code, color = colorOliveLight, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = colorOliveLight)
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(CardBackground)
+        ) {
+            AppCurrency.values().forEach { currency ->
+                DropdownMenuItem(
+                    text = { Text("${currency.code} (${currency.symbol})", color = Color.White) },
+                    onClick = {
+                        viewModel.updateCurrency(currency)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun AppHomePage(
     navController: NavController,
-    viewModel: TransactionViewModel = viewModel() // 1. Получение экземпляра ViewModel для доступа к данным (требует определения TransactionViewModel).
+    viewModel: TransactionViewModel = viewModel()
 ) {
-    // 2. Сбор данных о транзакциях в реальном времени. При изменении данных, UI автоматически обновится.
     val transactions by viewModel.transactionsFlow.collectAsState()
+    val currency by viewModel.currencyFlow.collectAsState()
 
-    // 3. Общие итоги за всё время (предполагается, что они предварительно рассчитаны в ViewModel):
+    // ОПТИМИЗАЦИЯ: derivedStateOf предотвращает лишние пересчеты
+    val totalIncomeNet by remember(transactions) {
+        derivedStateOf { transactions.filter { it.isIncome }.sumOf { it.amount.absoluteValue } }
+    }
+    val totalExpensesNet by remember(transactions) {
+        derivedStateOf { transactions.filter { !it.isIncome }.sumOf { it.amount.absoluteValue } }
+    }
+
     val totalIncomeAllTime = viewModel.totalIncomeAllTime
     val totalExpensesAllTime = viewModel.totalExpensesAllTime
     val balanceAllTime = viewModel.balanceAllTime
 
-    // 4. Расчет чистого баланса (NetBalance) за текущий период
-    // Используется абсолютное значение (absoluteValue), чтобы убедиться, что суммы прибавляются/вычитаются корректно.
-    val totalIncomeNet = transactions.filter { it.isIncome }.sumOf { it.amount.absoluteValue }
-    val totalExpensesNet = transactions.filter { !it.isIncome }.sumOf { it.amount.absoluteValue }
-
-    Column( // Вертикальный макет для организации элементов страницы
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF2E3033)) // Установка темно-серого фона
+            .background(BackgroundColor)
     ) {
-        HomePageHeader() // Компонент шапки (логотип + профиль)
-        Spacer(modifier = Modifier.height(100.dp)) // Большой отступ
+        HomePageHeader(viewModel) // Передаем ViewModel для валюты
+        Spacer(modifier = Modifier.height(100.dp))
 
-        // Баланс за всё время.
-        BalanceText(balance = balanceAllTime) // 5. Компонент для отображения общего баланса (требует определения BalanceText).
+        // Конвертация баланса
+        BalanceText(balance = balanceAllTime * currency.rateToEuro, currencySymbol = currency.symbol)
 
-        // Чистый баланс за текущий период (разница между Net Income и Net Expenses).
-        NetBalanceCard(income = totalIncomeNet, expenses = totalExpensesNet)
+        NetBalanceCard(
+            income = totalIncomeNet * currency.rateToEuro,
+            expenses = totalExpensesNet * currency.rateToEuro,
+            currencySymbol = currency.symbol
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Горизонтальный ряд для карточек доходов и расходов
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp) // Расстояние между карточками
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Карточка доходов. weight(1f) обеспечивает равное распределение ширины между IncomeCard и ExpensesCard.
-            IncomeCard(modifier = Modifier.weight(1f), totalIncome = totalIncomeAllTime)
-            ExpensesCard(modifier = Modifier.weight(1f), totalExpenses = totalExpensesAllTime)
+            IncomeCard(
+                modifier = Modifier.weight(1f),
+                totalIncome = totalIncomeAllTime * currency.rateToEuro,
+                currencySymbol = currency.symbol
+            )
+            ExpensesCard(
+                modifier = Modifier.weight(1f),
+                totalExpenses = totalExpensesAllTime * currency.rateToEuro,
+                currencySymbol = currency.symbol
+            )
         }
-        // Список последних двух транзакций.
-        LastTransactionsList(transactions = transactions, count = 2)
+        LastTransactionsList(transactions = transactions, count = 2, currency = currency)
     }
 }
 
 //==========================================HomePage==========================================
 
 @Composable
-fun HomePageHeader() {
-    //Задний фон (Контейнер)
-    Box(
-    ) {
-        // Header (Внутренний контейнер, задающий отступы)
+fun HomePageHeader(viewModel: TransactionViewModel = viewModel()) {
+    Box {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                // 1. Установка отступов: сверху (top) 44.dp, по бокам (start/end) 20.dp.
                 .padding(top = 44.dp, start = 20.dp, end = 20.dp)
         ) {
-            Row( // 2. Горизонтальный макет для размещения элементов в одну строку
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                // 3. Распределение: 'SpaceBetween' гарантирует, что логотип и профиль будут прижаты к противоположным краям.
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -199,741 +227,224 @@ fun HomePageHeader() {
                     fontSize = 40.sp
                 )
 
-                IconButton( // 5. Кнопка-контейнер для иконки профиля (обеспечивает кликабельную область)
-                    onClick = { /* действие */ },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon( // 6. Иконка профиля
-                        painter = painterResource(id = R.drawable.profile), // (Требуется ресурс 'profile')
-                        contentDescription = "Профиль",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape), // Обрезка изображения/иконки в круг
-                        tint = Color.White
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CurrencySelector(viewModel) // Вставляем выбор валюты
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = { /* действие */ },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.profile),
+                            contentDescription = "Профиль",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            tint = Color.White
+                        )
+                    }
                 }
-
             }
         }
-
-
-    }
-}
-
-
-@Composable
-fun IncomeCard(modifier: Modifier = Modifier, totalIncome: Double) {
-    Box( // Контейнер для карточки
-        modifier = modifier
-            .border( // 1. Основной элемент дизайна: граница
-                width = 2.dp,
-                color = colorOliveLight, // Зеленый цвет для дохода
-                shape = RoundedCornerShape(16.dp) // Скругленные углы
-            )
-            .padding(vertical = 16.dp), // Внутренний вертикальный отступ
-        contentAlignment = Alignment.Center // Центрирование содержимого внутри Box
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) { // Вертикальное расположение текста (заголовок + сумма)
-            Text( // Заголовок
-                text = "Income",
-                color = colorOliveLight,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text( // Сумма дохода
-                // 2. Форматирование суммы: "%+, .2f" добавляет знак '+' и разделитель тысячных (запятую),
-                // а также округляет до двух знаков после запятой, добавляя символ евро.
-                text = "${"+%,.2f".format(totalIncome)} €",
-                color = colorOliveLight,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
     }
 }
 @Composable
-fun ExpensesCard(modifier: Modifier = Modifier, totalExpenses: Double) {
-    Box( // Контейнер для карточки
+fun BalanceText(balance: Double, currencySymbol: String = "€") {
+    val formatted = remember(balance) {
+        java.text.DecimalFormat("#,##0.00").format(balance)
+    }
+
+    Text(
+        text = "$currencySymbol$formatted",
+        fontSize = 45.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color.White,
+        modifier = Modifier.fillMaxWidth(),
+        textAlign = TextAlign.Center
+    )
+}
+@Composable
+fun IncomeCard(modifier: Modifier = Modifier, totalIncome: Double, currencySymbol: String) {
+    Box(
         modifier = modifier
-            .border( // 1. Красная граница
-                width = 2.dp,
-                color = Color(0xFFF56C6F), // Красный цвет для расхода
-                shape = RoundedCornerShape(16.dp)
-            )
+            .border(2.dp, colorOliveLight, RoundedCornerShape(16.dp))
             .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text( // Заголовок
-                text = "Expenses",
-                color = Color(0xFFF56C6F),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Income", color = colorOliveLight, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
-            Text( // Сумма расхода
-                // 2. Форматирование суммы: использует знак '-' в начале строки,
-                // чтобы явно обозначить расход.
-                text = "${"-%,.2f".format(totalExpenses)} €",
-                color = Color(0xFFF56C6F),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Text("+$currencySymbol${"%,.2f".format(totalIncome)}", color = colorOliveLight, fontSize = 20.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
+
 @Composable
-fun NetBalanceCard(income: Double, expenses: Double) {
-    val net = income - expenses // 1. Вычисление чистого баланса
-    val isPositive = net >= 0 // 2. Проверка, является ли баланс положительным или нулевым
+fun ExpensesCard(modifier: Modifier = Modifier, totalExpenses: Double, currencySymbol: String) {
+    Box(
+        modifier = modifier
+            .border(2.dp, ExpenseColor, RoundedCornerShape(16.dp))
+            .padding(vertical = 16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Expenses", color = ExpenseColor, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("-$currencySymbol${"%,.2f".format(totalExpenses)}", color = ExpenseColor, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+fun NetBalanceCard(income: Double, expenses: Double, currencySymbol: String) {
+    val net = income - expenses
+    val isPositive = net >= 0
+    val displayColor = if (isPositive) colorOliveLight else ExpenseColor
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center // Центрирование всего содержимого
+        contentAlignment = Alignment.Center
     ) {
-        Row( // Горизонтальный макет для размещения текста и стрелки
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text( // 3. Метка "Net balance:"
-                text = "Net balance: ",
-                // Цвет зависит от знака баланса: зеленый (плюс) или красный (минус)
-                color = if (isPositive) colorOliveLight else Color(0xFFF56C6F),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Text( // 4. Отображение суммы баланса
-                // Форматирование: ",.2f" использует разделитель тысячных и 2 знака после запятой.
-                text = "${"%,.2f".format(net)} €",
-                color = if (isPositive) colorOliveLight else Color(0xFFF56C6F),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            Text("Net balance: ", color = displayColor, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+            Text("$currencySymbol${"%,.2f".format(net)}", color = displayColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.width(8.dp))
-
-            // 5. Стрелка вверх/вниз для визуальной индикации
-            Text(
-                text = if (isPositive) "▲" else "▼",
-                color = if (isPositive) colorOliveLight else Color(0xFFF56C6F),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(if (isPositive) "▲" else "▼", color = displayColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
-
-
 @Composable
 fun LastTransactionsList(
-    // 1. Принимает список объектов TransactionItem (Требуется определение TransactionItem).
     transactions: List<TransactionItem>,
-    count: Int = 2 // Сколько последних транзакций показывать
+    count: Int = 2,
+    currency: AppCurrency
 ) {
-    if (transactions.isEmpty()) { // Обработка случая, когда транзакций нет
-        Text(
-            text = "No recent transactions",
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 20.dp, start = 20.dp)
-        )
+    if (transactions.isEmpty()) {
+        Text("No recent transactions", color = Color.Gray, modifier = Modifier.padding(top = 20.dp, start = 20.dp))
         return
     }
 
-    Column( // Основной вертикальный контейнер
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .padding(top = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp) // Расстояние между строками транзакций
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Заголовок
-        Text(
-            text = "Recent Transactions",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        // 2. Логика отбора: берем только первые `count` элементов из списка.
-        // Это предполагает, что новые транзакции добавляются в начало списка (индекс 0).
-        val recent = transactions.take(count)
-
-        // 3. Отображение: для каждой транзакции вызывается Composable-функция TransactionRow.
-        recent.forEach { t ->
-            TransactionRow(transaction = t) // (Требуется определение TransactionRow).
+        Text("Recent Transactions", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        transactions.take(count).forEach { t ->
+            TransactionRow(transaction = t, currency = currency)
         }
     }
 }
-@Composable
-fun Footer(
-    navController: NavController // 1. Контроллер для выполнения навигации
-) {
 
-    Box( // Основной контейнер, который задает высоту и отступы футера
+@Composable
+fun Footer(navController: NavController) {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(115.dp) // Фиксированная высота футера (может быть большой для стандартной панели)
+            .height(115.dp)
             .padding(start = 20.dp, end = 20.dp),
     ) {
-        Column( // Вертикальный макет для размещения разделителя и иконок
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top=10.dp, bottom = 10.dp),
-            verticalArrangement = Arrangement.SpaceBetween // Разделение элементов (разделитель сверху, иконки снизу)
+                .padding(top = 10.dp, bottom = 10.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Divider( // 2. Горизонтальный разделитель (тонкая линия)
-                color = Color(0xFF545659), // Темно-серый цвет для линии
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row( // 3. Горизонтальный макет для иконок навигации
+            Divider(color = DividerColor, modifier = Modifier.fillMaxWidth())
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly, // 4. Равномерное распределение элементов по ширине
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Home (Кнопка 1)
-                Box(
-                    modifier = Modifier
-                        .size(60.dp, 66.dp)
-                        // 5. Обработчик клика: переводит на маршрут "HomePage"
-                        .clickable { navController.navigate("HomePage") },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.homeicon), // (Требуется ресурс 'homeicon')
-                        contentDescription = "HomeIcon",
-                        modifier = Modifier.fillMaxSize(),
-                        tint = Color.White
-                    )
-                }
-
-                // Transactions (Кнопка 2)
-                Box(
-                    modifier = Modifier
-                        .size(100.dp, 66.dp) // Более широкая область для нажатия
-                        .clickable { navController.navigate("TransactionsPage") },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.transactionsicon), // (Требуется ресурс 'transactionsicon')
-                        contentDescription = "TransactionsIcon",
-                        modifier = Modifier.fillMaxSize(),
-                        tint = Color.White
-                    )
-
-                }
-                // Reports (Кнопка 3)
-                Box(
-                    modifier = Modifier
-                        .size(62.dp, 66.dp)
-                        .clickable { navController.navigate("ReportsPage") },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.reportsicon), // (Требуется ресурс 'reportsicon')
-                        contentDescription = "ReportsIcon",
-                        modifier = Modifier.fillMaxSize(),
-                        tint = Color.White
-                    )
-                }
-                // Budget (Кнопка 4)
-                Box(
-                    modifier = Modifier
-                        .size(57.dp, 68.dp)
-                        .clickable { navController.navigate("BudgetPage") },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.budgeticon), // (Требуется ресурс 'budgeticon')
-                        contentDescription = "BudgetIcon",
-                        modifier = Modifier.fillMaxSize(),
-                        tint = Color.White
-                    )
-                }
+                FooterItem(navController, "HomePage", R.drawable.homeicon, 60.dp)
+                FooterItem(navController, "TransactionsPage", R.drawable.transactionsicon, 100.dp)
+                FooterItem(navController, "ReportsPage", R.drawable.reportsicon, 62.dp)
+                FooterItem(navController, "BudgetPage", R.drawable.budgeticon, 57.dp)
             }
         }
     }
 }
-
 
 
 //==========================================TransactionsPage==========================================
 @Composable
 fun AppTransactionsPage(
     navController: NavController,
-    viewModel: TransactionViewModel = viewModel() // 1. Получение ViewModel для доступа к данным и методам добавления.
+    viewModel: TransactionViewModel = viewModel()
 ) {
-    // 2. StateFlow: Собираем список транзакций в реальном времени.
     val transactions by viewModel.transactionsFlow.collectAsState()
+    val currency by viewModel.currencyFlow.collectAsState()
 
-    // 3. Состояние UI: Флаг для управления видимостью диалогового окна добавления.
     var showAddDialog by remember { mutableStateOf(false) }
-
-    // 4. Состояние UI: Текущий выбранный фильтр ("Month", "Week", "Year").
     var selectedFilter by remember { mutableStateOf("Month") }
-
-    // 5. Инструмент для форматирования даты в формате "день.месяц.год" для отображения.
     val displayDateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
 
-    // --- Логика фильтрации транзакций ---
     val filteredTransactions = remember(transactions, selectedFilter) {
-        val now = Calendar.getInstance()
-        val startDate = Calendar.getInstance()
-
-        // 6. Установка начальной даты в зависимости от выбранного фильтра:
-        when (selectedFilter) {
-            "Week" -> {
-                // Начинаем неделю с понедельника
-                startDate.firstDayOfWeek = Calendar.MONDAY
-                // Вычисляем, на сколько дней нужно вернуться, чтобы попасть на начало недели
-                val diff = (now.get(Calendar.DAY_OF_WEEK) - Calendar.MONDAY + 7) % 7
-                startDate.add(Calendar.DAY_OF_MONTH, -diff)
-            }
-            "Month" -> {
-                // Устанавливаем день месяца в 0 (это приведет к последнему дню предыдущего месяца,
-                // что эффективно, но обычно лучше использовать `set(Calendar.DAY_OF_MONTH, 1)`)
-                startDate.set(Calendar.DAY_OF_MONTH, 0)
-            }
-            "Year" -> {
-                // Устанавливаем начало года
-                startDate.set(Calendar.MONTH, Calendar.JANUARY)
-                startDate.set(Calendar.DAY_OF_MONTH, 0)
-            }
+        val now = LocalDate.now()
+        val zoneId = ZoneId.systemDefault()
+        val startDate = when (selectedFilter) {
+            "Week" -> now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            "Month" -> now.with(TemporalAdjusters.firstDayOfMonth())
+            "Year" -> now.with(TemporalAdjusters.firstDayOfYear())
+            else -> now
         }
-
-        val endDate = Calendar.getInstance() // Конечная дата — сегодня
-
-        // 7. Фильтрация: оставляем только те транзакции, дата которых находится между startDate и endDate.
-        transactions.filter { t ->
-            val transactionDate = Calendar.getInstance().apply { time = Date(t.date) }
-
-            !transactionDate.before(startDate) && !transactionDate.after(endDate)
-        }
+        val startMillis = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val endMillis = now.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
+        transactions.filter { t -> t.date in startMillis until endMillis }
     }
-    // --- Конец логики фильтрации ---
 
-    // UI Макет
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF2E3033))
+            .background(BackgroundColor)
             .padding(top = 20.dp, start = 20.dp, end = 20.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            TransactionsPageHeader() // (Требуется определение TransactionsPageHeader)
+            TransactionsPageHeader(viewModel)
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Dropdown фильтра
-            FilterDropdown( // (Требуется определение FilterDropdown)
+            FilterDropdown(
                 currentFilter = selectedFilter,
                 onFilterSelected = { newFilter -> selectedFilter = newFilter }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Список транзакций
             if (filteredTransactions.isEmpty()) {
-                Box( // Отображение сообщения, если список пуст
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Нет транзакций за выбранный период",
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Нет транзакций за выбранный период", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
-                LazyColumn( // 8. Оптимизированный список (отображает только видимые элементы)
+                LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(filteredTransactions) { t ->
-                        TransactionRow(transaction = t) // (Требуется определение TransactionRow)
-
-                        // 9. Отображение даты под транзакцией
-                        Text(
-                            text = displayDateFormat.format(Date(t.date)),
-                            color = Color.Gray,
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // 10. Floating Action Button (FAB) для добавления транзакции
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd) // Прижимаем к правому нижнему углу
-                .padding(16.dp)
-        ) {
-            FloatingActionButton(
-                onClick = { showAddDialog = true }, // Открываем диалог
-                containerColor = colorOliveLight // Зеленый цвет
-            ) {
-                Text("+", color = Color.White, fontSize = 24.sp)
-            }
-        }
-
-        // 11. Диалог добавления
-        if (showAddDialog) {
-            AddTransactionDialog( // (Требуется определение AddTransactionDialog)
-                onDismiss = { showAddDialog = false },
-                onAdd = { name, category, amount, isIncome ->
-                    // Вызываем метод ViewModel для сохранения данных и закрываем диалог
-                    viewModel.addTransaction(name, category, amount, isIncome)
-                    showAddDialog = false
-                }
-            )
-        }
-    }
-}
-
-
-
-@Composable
-fun FilterDropdown(
-    currentFilter: String, // Текущее выбранное значение ("Month", "Week", "Year")
-    onFilterSelected: (String) -> Unit // Callback, вызываемый при выборе нового фильтра
-) {
-    // 1. Состояние: Управляет видимостью выпадающего меню.
-    var expanded by remember { mutableStateOf(false) }
-    val filters = listOf("Week", "Month", "Year")
-
-    Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) { // 2. Контейнер, который позволяет меню "расширяться"
-        Row( // Элемент, который виден всегда и по клику открывает меню
-            modifier = Modifier
-                .clickable { expanded = true } // 3. Открываем меню по клику
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text( // 4. Основной текст, показывающий текущий фильтр
-                text = "This $currentFilter",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "▼", color = Color.White) // Иконка-стрелка
-        }
-
-        DropdownMenu( // 5. Само выпадающее меню
-            expanded = expanded,
-            onDismissRequest = { expanded = false }, // Закрываем по клику вне области
-            modifier = Modifier.background(Color(0xFF545659)) // Темный фон меню
-        ) {
-            filters.forEach { filter ->
-                DropdownMenuItem( // Элемент списка меню
-                    text = {
-                        Text(
-                            text = filter,
-                            // Выделяем зеленым цветом текущий выбранный фильтр
-                            color = if (filter == currentFilter) colorOliveLight else Color.White
-                        )
-                    },
-                    onClick = {
-                        onFilterSelected(filter) // 6. Вызываем callback с новым значением
-                        expanded = false // Закрываем меню
-                    }
-                )
-            }
-        }
-    }
-}
-@Composable
-fun TransactionRow(transaction: TransactionItem) {
-    // 1. Определение цвета на основе типа транзакции: зеленый для дохода, красный для расхода.
-    val color = if (transaction.isIncome) colorOliveLight else Color(0xFFF56C6F)
-
-    // 2. Логика выбора иконки: сопоставление строки категории с ресурсом R.drawable.*
-    // Если категория не найдена, iconRes будет null, и иконка не отобразится.
-    val iconRes = when (transaction.category) {
-        "Supermarket" -> R.drawable.groserries // (Требуется ресурс 'groserries')
-        "Medicine" -> R.drawable.medicine // (Требуется ресурс 'medicine')
-        "Flowers" -> R.drawable.flowers // (Требуется ресурс 'flowers')
-        "Fast food" -> R.drawable.fastfood // (Требуется ресурс 'fastfood')
-        "Clothes" -> R.drawable.clothes // (Требуется ресурс 'clothes')
-        "Transport" -> R.drawable.transport // (Требуется ресурс 'transport')
-        "Taxi" -> R.drawable.taxi // (Требуется ресурс 'taxi')
-        "Rent" -> R.drawable.rent // (Требуется ресурс 'rent')
-        "Finance" -> R.drawable.finance // (Требуется ресурс 'finance')
-        else -> null
-    }
-
-    Box( // Контейнер строки транзакции
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp)) // Скругление углов
-            .background(Color(0xFF3A3B3E)) // Темно-серый фон для строки
-            .padding(16.dp)
-    ) {
-        Row( // Горизонтальный макет: Иконка/Название слева, Сумма справа
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween, // Прижимает элементы к противоположным краям
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // 3. Условное отображение иконки: только если ресурс был найден (iconRes != null).
-                iconRes?.let {
-                    Icon(
-                        painter = painterResource(id = it),
-                        contentDescription = transaction.category,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .padding(end = 12.dp),
-                        tint = Color.White
-                    )
-                }
-
-                Column { // Название и Категория
-                    Text(
-                        text = transaction.name,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = transaction.category,
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-
-            // 4. Отображение суммы с соответствующим знаком (+/-)
-            Text(
-                text = (if (transaction.isIncome) "+" else "-") + "${"%,.2f".format(transaction.amount)} €",
-                color = color,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-
-@Composable
-fun TransactionsPageHeader() {
-    // Заголовок страницы с логотипом и профилем
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 20.dp) // Немного меньший верхний отступ, чем на HomePage
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween, // Логотип слева, профиль справа
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Transactions",
-                color = Color.White,
-                fontSize = 40.sp
-            )
-
-            IconButton( // Иконка профиля
-                onClick = { /* действие по профилю */ },
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.profile), // (Требуется ресурс 'profile')
-                    contentDescription = "Профиль",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape),
-                    tint = Color.White
-                )
-            }
-        }
-    }
-}
-@Composable
-fun TransactionsPageMain(){
-    // Этот компонент-обертка не используется явно в AppTransactionsPage,
-    // но сохраняется для целей структуры.
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding( start = 20.dp, end = 20.dp)
-    ){
-        // Основное содержимое будет внутри AppTransactionsPage
-    }
-
-}
-
-@Composable
-fun AddTransactionDialog(
-    onDismiss: () -> Unit,
-    onAdd: (String, String, Double, Boolean) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var isIncome by remember { mutableStateOf(false) }
-
-    val categories = listOf(
-        "Supermarket", "Medicine", "Flowers", "Fast food", "Clothes",
-        "Transport", "Taxi", "Rent", "Finance"
-    )
-
-    var expanded by remember { mutableStateOf(false) }
-    var selectedCategory by remember { mutableStateOf(categories.first()) }
-
-    val isCategorySelectionEnabled = !isIncome
-    LaunchedEffect(isIncome) {
-        if (isIncome) {
-            // Если выбран Доход, принудительно устанавливаем Finance
-            selectedCategory = "Finance"
-        }
-        // Если isIncome = false, категория остается той, которую выбрал пользователь
-    }
-
-    // Выбираем символ в зависимости от состояния
-    val arrowSymbol = if (expanded) "▲" else "▼"
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                val amt = amount.toDoubleOrNull() ?: 0.0
-                if (name.isNotBlank() && amt > 0.0) {
-                    onAdd(name, selectedCategory, amt, isIncome)
-                    onDismiss()
-                }
-            }) {
-                Text("Add", color = colorOliveLight)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.White)
-            }
-        },
-        title = { Text("Add Transaction", color = Color.White) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name, onValueChange = { name = it },
-                    label = { Text("Name", color = Color.Gray) },
-                    textStyle = TextStyle(color = Color.White)
-                )
-
-                // 3. Выбор категории с использованием DropdownMenu
-                Box {
-                    OutlinedTextField(
-                        value = selectedCategory,
-                        onValueChange = {},
-                        label = { Text("Category", color = Color.Gray) },
-                        readOnly = true,
-                        trailingIcon = {
+                    items(filteredTransactions, key = { it.id }) { t ->
+                        Column {
+                            TransactionRow(transaction = t, currency = currency)
                             Text(
-                                text = arrowSymbol,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier
-                                    .clickable { expanded = !expanded }
-                                    .padding(end = 8.dp)
+                                text = displayDateFormat.format(Date(t.date)),
+                                color = Color.Gray,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(start = 8.dp, top = 2.dp)
                             )
-                        },
-                        enabled = isCategorySelectionEnabled,
-                        colors = if (isCategorySelectionEnabled) OutlinedTextFieldDefaults.colors() else OutlinedTextFieldDefaults.colors(
-                            disabledContainerColor = Color(0xFF2E3033),
-                            disabledTextColor = Color.White
-                        ),
-                        // ИЗМЕНЕНИЕ: Выравнивание текста по правому краю в поле категории
-                        textStyle = TextStyle(
-                            color = Color.White
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { expanded = !expanded }
-                    )
-
-                    if (isCategorySelectionEnabled) {
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false },
-                            modifier = Modifier
-                                .background(Color(0xFF2E3033))
-                                .width(IntrinsicSize.Max)
-                        ) {
-                            // Исключаем Finance из списка, если это не Доход (чтобы избежать дублирования)
-                            categories.filter { it != "Finance" }.forEach { category ->
-                                DropdownMenuItem(
-                                    text = { Text(category, color = Color.White) },
-                                    onClick = {
-                                        selectedCategory = category
-                                        expanded = false
-                                    }
-                                )
-                            }
                         }
                     }
                 }
-
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = {
-                        amount = it.filter { char -> char.isDigit() || char == '.' || char == ',' }
-                    },
-                    label = { Text("Amount", color = Color.Gray) },
-                    textStyle = TextStyle(color = Color.White),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                )
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = isIncome, onCheckedChange = { isIncome = it })
-                    Text("Income", color = Color.White)
-                }
-            }
-        },
-        containerColor = Color(0xFF2E3033)
-    )
-}
-
-//==========================================ReportPage==========================================
-@Composable
-fun AppReportsPage(
-    navController: NavController,
-    viewModel: TransactionViewModel = viewModel()
-) {
-    var showAddDialog by remember { mutableStateOf(false) }
-
-    // 1. Корневой Box для фона и наложения слоев (Кнопка поверх Контента)
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF2E3033))
-        // УБРАНО: .padding(...) - это ломало позицию хедера
-    ) {
-        // 2. Вертикальный стек: Сначала Хедер, потом Контент
-        Column(modifier = Modifier.fillMaxSize()) {
-
-            HeaderReportsPage() // Хедер с правильным отступом внутри
-
-            // Контент занимает все оставшееся место и имеет отступы по бокам
-            Box(
-                modifier = Modifier
-                    .weight(1f) // Занимает всё место под хедером
-                    .padding(horizontal = 20.dp) // Отступы только для контента
-            ) {
-                MainReportsPage(viewModel)
             }
         }
 
-        // 3. Плавающая кнопка (прижата к низу справа)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(20.dp) // Отступ от краев экрана
+                .padding(16.dp)
         ) {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
@@ -943,33 +454,292 @@ fun AppReportsPage(
             }
         }
 
-        // 4. Диалог
+        if (showAddDialog) {
+            AddTransactionDialog(
+                onDismiss = { showAddDialog = false },
+                onAdd = { name, category, amount, isIncome ->
+                    viewModel.addTransaction(name, category, amount, isIncome)
+                    showAddDialog = false
+                },
+                currencySymbol = currency.symbol
+            )
+        }
+    }
+}
+
+@Composable
+fun FilterDropdown(
+    currentFilter: String,
+    onFilterSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val filters = listOf("Week", "Month", "Year")
+
+    Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
+        Row(
+            modifier = Modifier
+                .clickable { expanded = true }
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("This $currentFilter", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("▼", color = Color.White)
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(DividerColor)
+        ) {
+            filters.forEach { filter ->
+                DropdownMenuItem(
+                    text = { Text(filter, color = if (filter == currentFilter) colorOliveLight else Color.White) },
+                    onClick = { onFilterSelected(filter); expanded = false }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TransactionRow(transaction: TransactionItem, currency: AppCurrency = AppCurrency.EUR) {
+    val color = if (transaction.isIncome) colorOliveLight else ExpenseColor
+
+    val iconRes = when (transaction.category) {
+        "Supermarket" -> R.drawable.groserries
+        "Medicine" -> R.drawable.medicine
+        "Flowers" -> R.drawable.flowers
+        "Fast food" -> R.drawable.fastfood
+        "Clothes" -> R.drawable.clothes
+        "Transport" -> R.drawable.transport
+        "Taxi" -> R.drawable.taxi
+        "Rent" -> R.drawable.rent
+        "Finance" -> R.drawable.finance
+        "Сбережения/Цели" -> transaction.iconRes ?: R.drawable.coins
+        else -> null
+    }
+
+    // Конвертация
+    val displayAmount = transaction.amount * currency.rateToEuro
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardBackground)
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = transaction.category,
+                    modifier = Modifier.size(32.dp),
+                    tint = Color.White
+                )
+            }
+
+            // ОПТИМИЗАЦИЯ: weight(1f) для корректного переноса текста
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp)
+            ) {
+                Text(
+                    text = transaction.name,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = transaction.category,
+                    color = Color.Gray,
+                    fontSize = 14.sp
+                )
+            }
+
+            Text(
+                text = (if (transaction.isIncome) "+" else "-") + "${currency.symbol}${"%,.2f".format(displayAmount)}",
+                color = color,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
+    }
+}
+
+@Composable
+fun TransactionsPageHeader(viewModel: TransactionViewModel = viewModel()) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 20.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Transactions",
+                color = Color.White,
+                fontSize = 40.sp
+            )
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CurrencySelector(viewModel)
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = { /* действие по профилю */ },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.profile),
+                        contentDescription = "Профиль",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TransactionsPageMain() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp)
+    ) {
+    }
+}
+
+@Composable
+fun AddTransactionDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, String, Double, Boolean) -> Unit,
+    currencySymbol: String = "€"
+) {
+    var name by remember { mutableStateOf("") }
+    var amount by remember { mutableStateOf("") }
+    var isIncome by remember { mutableStateOf(false) }
+    val categories = listOf("Supermarket", "Medicine", "Flowers", "Fast food", "Clothes", "Transport", "Taxi", "Rent", "Finance")
+    var expanded by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf(categories.first()) }
+    val isCategorySelectionEnabled = !isIncome
+
+    LaunchedEffect(isIncome) { if (isIncome) selectedCategory = "Finance" }
+
+    val arrowSymbol = if (expanded) "▲" else "▼"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = BackgroundColor,
+        confirmButton = {
+            TextButton(onClick = {
+                val amt = amount.replace(',', '.').toDoubleOrNull() ?: 0.0
+                if (name.isNotBlank() && amt > 0.0) {
+                    onAdd(name, selectedCategory, amt, isIncome)
+                    onDismiss()
+                }
+            }) { Text("Add", color = colorOliveLight) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White) } },
+        title = { Text("Add Transaction", color = Color.White) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it },
+                    label = { Text("Name", color = Color.Gray) },
+                    textStyle = TextStyle(color = Color.White),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(modifier = Modifier.padding(top = 8.dp)) {
+                    OutlinedTextField(
+                        value = selectedCategory, onValueChange = {}, label = { Text("Category", color = Color.Gray) }, readOnly = true,
+                        trailingIcon = { Text(arrowSymbol, color = Color.White, modifier = Modifier.padding(end = 8.dp)) },
+                        enabled = isCategorySelectionEnabled, textStyle = TextStyle(color = Color.White),
+                        modifier = Modifier.fillMaxWidth().clickable(enabled = isCategorySelectionEnabled) { expanded = !expanded },
+                        colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledContainerColor = BackgroundColor, disabledBorderColor = Color.Gray)
+                    )
+                    if (isCategorySelectionEnabled) {
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(BackgroundColor)) {
+                            categories.filter { it != "Finance" }.forEach { category ->
+                                DropdownMenuItem(text = { Text(category, color = Color.White) }, onClick = { selectedCategory = category; expanded = false })
+                            }
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = amount, onValueChange = { amount = it.filter { char -> char.isDigit() || char == '.' || char == ',' } },
+                    label = { Text("Amount ($currencySymbol)", color = Color.Gray) },
+                    textStyle = TextStyle(color = Color.White),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                    Checkbox(checked = isIncome, onCheckedChange = { isIncome = it }, colors = CheckboxDefaults.colors(checkedColor = colorOliveLight))
+                    Text("Income", color = Color.White)
+                }
+            }
+        }
+    )
+}
+
+// ========================================== REPORTS PAGE ==========================================
+
+@Composable
+fun AppReportsPage(
+    navController: NavController,
+    viewModel: TransactionViewModel = viewModel()
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    val currency by viewModel.currencyFlow.collectAsState()
+
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundColor)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            HeaderReportsPage(viewModel)
+            Box(modifier = Modifier.weight(1f).padding(horizontal = 20.dp)) {
+                MainReportsPage(viewModel, currency)
+            }
+        }
+        Box(modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)) {
+            FloatingActionButton(onClick = { showAddDialog = true }, containerColor = colorOliveLight) {
+                Text("+", color = Color.White, fontSize = 24.sp)
+            }
+        }
         if (showAddDialog) {
             AddReportLimitDialog(
                 onDismiss = { showAddDialog = false },
                 onSetLimit = { category, limit, period ->
                     viewModel.setReportLimit(category, limit, period)
                     showAddDialog = false
-                }
+                },
+                currencySymbol = currency.symbol
             )
         }
     }
 }
+
 @Composable
-fun HeaderReportsPage(){
-    //Задний фон (Контейнер)
-    Box(
-    ) {
-        // Header (Внутренний контейнер, задающий отступы)
+fun HeaderReportsPage(viewModel: TransactionViewModel = viewModel()) {
+    Box {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                // 1. Установка отступов: сверху (top) 44.dp, по бокам (start/end) 20.dp.
                 .padding(top = 44.dp, start = 20.dp, end = 20.dp)
         ) {
-            Row( // 2. Горизонтальный макет для размещения элементов в одну строку
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                // 3. Распределение: 'SpaceBetween' гарантирует, что логотип и профиль будут прижаты к противоположным краям.
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -979,55 +749,64 @@ fun HeaderReportsPage(){
                     fontSize = 40.sp
                 )
 
-                IconButton( // 5. Кнопка-контейнер для иконки профиля (обеспечивает кликабельную область)
-                    onClick = { /* действие */ },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon( // 6. Иконка профиля
-                        painter = painterResource(id = R.drawable.profile), // (Требуется ресурс 'profile')
-                        contentDescription = "Профиль",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape), // Обрезка изображения/иконки в круг
-                        tint = Color.White
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CurrencySelector(viewModel)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = { /* действие */ },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.profile),
+                            contentDescription = "Профиль",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            tint = Color.White
+                        )
+                    }
                 }
-
             }
         }
-
-
     }
 }
 
 @Composable
 fun MainReportsPage(
-    viewModel: TransactionViewModel
+    viewModel: TransactionViewModel,
+    currency: AppCurrency
 ) {
     val reports by viewModel.reportsFlow.collectAsState()
     val allTransactions by viewModel.transactionsFlow.collectAsState()
-
     val selectedFilter = "Month"
 
-    // 1. Calculate spending per category
+    // ОПТИМИЗАЦИЯ: Явно указываем типы, чтобы компилятор не путался
     val spentByCategoryMap: Map<String, Double> = remember(allTransactions, reports, selectedFilter) {
-        val filteredTransactions = filterTransactionsByPeriod(allTransactions, selectedFilter)
-            .filter { !it.isIncome }
+        // 1. Сначала фильтруем
+        val filtered = filterTransactionsByPeriod(allTransactions, selectedFilter)
 
-        filteredTransactions
-            .groupBy { it.category }
-            .mapValues { (_, list) -> list.sumOf { it.amount } }
+        // 2. Потом считаем
+        filtered
+            .filter { !it.isIncome } // Оставляем только расходы
+            .groupBy { it.category } // Группируем по категориям
+            .mapValues { entry ->    // Считаем сумму для каждой категории
+                entry.value.sumOf { it.amount }
+            }
     }
 
-    // 2. Identify overspent categories
-    val overspentItems = remember(reports, spentByCategoryMap) {
+    val overspentItems = remember(reports, spentByCategoryMap, currency) {
         reports.filter { report ->
+            // Сравниваем потраченное (в Евро) с лимитом (в Евро)
             val spent = spentByCategoryMap[report.category] ?: 0.0
             spent > report.limitAmount
         }.map { report ->
             val spent = spentByCategoryMap[report.category] ?: 0.0
-            // Return a Triple: Category, Overspent Amount, Icon Resource
-            Triple(report.category, spent - report.limitAmount, getCategoryIcon(report.category))
+            // Считаем разницу в Евро
+            val diffEuro = spent - report.limitAmount
+            // Конвертируем разницу в выбранную валюту для отображения
+            val displayDiff = diffEuro * currency.rateToEuro
+
+            Triple(report.category, displayDiff, getCategoryIcon(report.category))
         }
     }
 
@@ -1046,17 +825,24 @@ fun MainReportsPage(
             contentPadding = PaddingValues(top = 10.dp, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Section 1: Progress Bars
             items(reports) { report ->
-                val spent = spentByCategoryMap[report.category] ?: 0.0
-                ReportLimitCard(report = report, spentAmount = spent)
+                // Конвертируем суммы в Евро в выбранную валюту для отображения
+                val spentInEuro = spentByCategoryMap[report.category] ?: 0.0
+
+                val spentDisplay = spentInEuro * currency.rateToEuro
+                val limitDisplay = report.limitAmount * currency.rateToEuro
+
+                ReportLimitCard(
+                    report = report,
+                    spentAmount = spentDisplay,
+                    limitDisplay = limitDisplay,
+                    currencySymbol = currency.symbol
+                )
             }
 
-            // Section 2: Categories Over Budget (Only if there are any)
             if (overspentItems.isNotEmpty()) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    // Divider Line
                     Divider(color = Color.Gray, thickness = 1.dp)
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -1070,7 +856,12 @@ fun MainReportsPage(
                 }
 
                 items(overspentItems) { (category, amount, iconRes) ->
-                    OverspentRow(category = category, amount = amount, iconRes = iconRes)
+                    OverspentRow(
+                        category = category,
+                        amount = amount,
+                        iconRes = iconRes,
+                        currencySymbol = currency.symbol
+                    )
                 }
             }
         }
@@ -1079,18 +870,11 @@ fun MainReportsPage(
 @Composable
 fun AddReportLimitDialog(
     onDismiss: () -> Unit,
-    // Сигнатура для передачи данных в ViewModel: (Категория, Лимит, Период)
-    onSetLimit: (String, Double, String) -> Unit
+    onSetLimit: (String, Double, String) -> Unit,
+    currencySymbol: String
 ) {
     var amount by remember { mutableStateOf("") }
-
-    // Категории, на которые можно ставить лимит (исключаем "Finance", т.к. это доход)
-    val limitCategories = listOf(
-        "Supermarket", "Medicine", "Flowers", "Fast food", "Clothes",
-        "Transport", "Taxi", "Rent"
-    )
-
-    // Периоды для лимита
+    val limitCategories = listOf("Supermarket", "Medicine", "Flowers", "Fast food", "Clothes", "Transport", "Taxi", "Rent")
     val periods = listOf("Month", "Week", "Year")
 
     var expandedCategory by remember { mutableStateOf(false) }
@@ -1106,29 +890,22 @@ fun AddReportLimitDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
-                // Заменяем запятую на точку перед конвертацией
                 val amt = amount.replace(',', '.').toDoubleOrNull() ?: 0.0
                 if (amt > 0.0) {
                     onSetLimit(selectedCategory, amt, selectedPeriod)
                     onDismiss()
                 }
-            }) {
-                Text("Set Limit", color = colorOliveLight)
-            }
+            }) { Text("Set Limit", color = colorOliveLight) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel", color = Color.White)
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White) }
         },
         title = { Text("Set Spending Limit", color = Color.White) },
         text = {
             Column {
-                // 1. Выбор категории
                 Box(modifier = Modifier.padding(top = 8.dp)) {
                     OutlinedTextField(
-                        value = selectedCategory,
-                        onValueChange = {},
+                        value = selectedCategory, onValueChange = {},
                         label = { Text("Category", color = Color.Gray) },
                         readOnly = true,
                         trailingIcon = {
@@ -1150,7 +927,7 @@ fun AddReportLimitDialog(
                     DropdownMenu(
                         expanded = expandedCategory,
                         onDismissRequest = { expandedCategory = false },
-                        modifier = Modifier.background(Color(0xFF2E3033))
+                        modifier = Modifier.background(BackgroundColor)
                     ) {
                         limitCategories.forEach { category ->
                             DropdownMenuItem(
@@ -1164,23 +941,18 @@ fun AddReportLimitDialog(
                     }
                 }
 
-                // 2. Поле для ввода суммы
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = {
-                        amount = it.filter { char -> char.isDigit() || char == '.' || char == ',' }
-                    },
-                    label = { Text("Limit Amount", color = Color.Gray) },
+                    onValueChange = { amount = it.filter { char -> char.isDigit() || char == '.' || char == ',' } },
+                    label = { Text("Limit Amount ($currencySymbol)", color = Color.Gray) },
                     textStyle = TextStyle(color = Color.White),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 )
 
-                // 3. Выбор периода (Week/Month/Year)
                 Box(modifier = Modifier.padding(top = 8.dp)) {
                     OutlinedTextField(
-                        value = selectedPeriod,
-                        onValueChange = {},
+                        value = selectedPeriod, onValueChange = {},
                         label = { Text("Period", color = Color.Gray) },
                         readOnly = true,
                         trailingIcon = {
@@ -1202,7 +974,7 @@ fun AddReportLimitDialog(
                     DropdownMenu(
                         expanded = expandedPeriod,
                         onDismissRequest = { expandedPeriod = false },
-                        modifier = Modifier.background(Color(0xFF2E3033))
+                        modifier = Modifier.background(BackgroundColor)
                     ) {
                         periods.forEach { period ->
                             DropdownMenuItem(
@@ -1217,205 +989,495 @@ fun AddReportLimitDialog(
                 }
             }
         },
-        containerColor = Color(0xFF2E3033)
+        containerColor = BackgroundColor
     )
 }
-fun filterTransactionsByPeriod(transactions: List<TransactionItem>, period: String): List<TransactionItem> {
-    val currentTime = System.currentTimeMillis()
-    val calendar = Calendar.getInstance()
-
-    // Определяем начальную точку периода
-    val startTime: Long = when (period) {
-        "Week" -> {
-            calendar.timeInMillis = currentTime
-            // Начинаем с начала недели (например, понедельника)
-            calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-            // Устанавливаем время на 00:00:00
-            calendar.set(Calendar.HOUR_OF_DAY, 0)
-            calendar.set(Calendar.MINUTE, 0)
-            calendar.set(Calendar.SECOND, 0)
-            calendar.set(Calendar.MILLISECOND, 0)
-            calendar.timeInMillis
-        }
-        "Month" -> {
-            calendar.timeInMillis = currentTime
-            // Начинаем с 1-го числа текущего месяца
-            calendar.set(Calendar.DAY_OF_MONTH, 1)
-            calendar.set(Calendar.HOUR_OF_DAY, 0)
-            calendar.set(Calendar.MINUTE, 0)
-            calendar.set(Calendar.SECOND, 0)
-            calendar.set(Calendar.MILLISECOND, 0)
-            calendar.timeInMillis
-        }
-        "Year" -> {
-            calendar.timeInMillis = currentTime
-            // Начинаем с 1 января текущего года
-            calendar.set(Calendar.DAY_OF_YEAR, 1)
-            calendar.set(Calendar.HOUR_OF_DAY, 0)
-            calendar.set(Calendar.MINUTE, 0)
-            calendar.set(Calendar.SECOND, 0)
-            calendar.set(Calendar.MILLISECOND, 0)
-            calendar.timeInMillis
-        }
-        else -> 0L
-    }
-
-    return transactions.filter { it.date >= startTime }
-}
-@Composable
-fun ReportProgressBar(spent: Double, limit: Double) {
-    // 1. Цвета
-    val greenColor = colorOliveLight // Зеленый для лимита
-    val redColor = Coral   // Красный для перерасхода
-
-    // 2. Расчет
-    val overspent = max(0.0, spent - limit)
-    val isOverspent = spent > limit
-
-    // Общая база: если перерасход, база — это общая трата, иначе — лимит.
-    val totalProgressBase = if (isOverspent) spent else limit
-
-    // Доля лимита (зеленая часть)
-    val limitWeight = if (limit > 0) min(1f, (limit / totalProgressBase).toFloat()) else 0f
-
-    // Доля перерасхода (красная часть)
-    val overspentWeight = if (overspent > 0) (overspent / totalProgressBase).toFloat() else 0f
-
-    // Прогресс для LinearProgressIndicator
-    val progress = if (limit > 0) (spent / limit).toFloat() else 0f
-
-
-    // 3. Компоновка шкалы прогресса
-    if (!isOverspent && limit > 0) {
-        // Case 1: Траты <= Лимита (Используем стандартный индикатор)
-        LinearProgressIndicator(
-            progress = progress,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)), // Скругленные углы
-            color = greenColor,
-            trackColor = Color(0x884D4F52)
-        )
-    } else if (isOverspent) {
-        // Case 2: Траты > Лимита (Используем Row для двух цветов)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(Color(0x884D4F52)) // Фон для всей шкалы
-        ) {
-            // Зеленая часть (Лимит)
-            Box(
-                modifier = Modifier
-                    .weight(limitWeight)
-                    .fillMaxHeight()
-                    .background(greenColor)
-            )
-            // Красная часть (Перерасход)
-            Box(
-                modifier = Modifier
-                    .weight(overspentWeight)
-                    .fillMaxHeight()
-                    .background(redColor)
-            )
-        }
-    } else {
-        // Case 3: Лимит или траты равны 0 (показываем пустой трек)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(Color(0x884D4F52))
-        )
-    }
-}
 
 @Composable
-fun ReportLimitCard(
-    report: ReportItem,
-    spentAmount: Double
-) {
-    val overspent = max(0.0, spentAmount - report.limitAmount)
-    val isOverspent = spentAmount > report.limitAmount
-
-    // Форматирование
-    val spentFormatted = "%.2f".format(spentAmount)
-    val limitFormatted = "%.2f".format(report.limitAmount)
-    val overspentFormatted = "%.2f".format(overspent)
-
-    // Выбираем цвет для текста "Spent"
-    val spentTextColor = when {
-        isOverspent -> Coral // Красный при перерасходе
-        spentAmount > 0.0 -> colorOliveLight // Зеленый, если траты есть, но в пределах
-        else -> Color.White // Белый, если траты 0
-    }
-
-    val redColor = Coral
+fun ReportLimitCard(report: ReportItem, spentAmount: Double, limitDisplay: Double, currencySymbol: String) {
+    val overspent = max(0.0, spentAmount - limitDisplay)
+    val isOverspent = spentAmount > limitDisplay
+    val progress = if (limitDisplay > 0) (spentAmount / limitDisplay).toFloat() else 0f
+    val spentTextColor = if (isOverspent) Coral else if (spentAmount > 0) colorOliveLight else Color.White
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF4D4F52)), // Темно-серый фон карточки
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF4D4F52)),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // 1. Заголовок (Категория и Период)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = report.category,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = "Limit: €$limitFormatted / ${report.period}",
-                    fontSize = 14.sp,
-                    color = Color.LightGray
-                )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(report.category, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Limit: $currencySymbol${"%.2f".format(limitDisplay)} / ${report.period}", fontSize = 14.sp, color = Color.LightGray)
             }
-
             Spacer(modifier = Modifier.height(8.dp))
-
-            // 2. Прогресс Бар
-            ReportProgressBar(spent = spentAmount, limit = report.limitAmount)
-
+            ReportProgressBar(spent = spentAmount, limit = limitDisplay)
             Spacer(modifier = Modifier.height(8.dp))
-
-            // 3. Суммы (Потрачено и Перерасход)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Spent: €$spentFormatted",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = spentTextColor
-                )
-
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Spent: $currencySymbol${"%.2f".format(spentAmount)}", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = spentTextColor)
                 if (isOverspent) {
-                    Text(
-                        text = "Overspent: €$overspentFormatted",
-                        fontSize = 14.sp,
-                        color = redColor
-                    )
+                    Text("Overspent: $currencySymbol${"%.2f".format(overspent)}", fontSize = 14.sp, color = Coral)
                 } else {
-                    // Placeholder для выравнивания
                     Spacer(modifier = Modifier.width(1.dp))
                 }
             }
         }
     }
 }
-// Helper function to map category string to drawable resource
+
+@Composable
+fun OverspentRow(category: String, amount: Double, iconRes: Int?, currencySymbol: String) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (iconRes != null) {
+                Icon(painterResource(id = iconRes), contentDescription = category, modifier = Modifier.size(32.dp), tint = Coral)
+            } else {
+                Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(Coral))
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Text("Overspent by: $currencySymbol${"%.2f".format(amount)}", color = Coral, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Divider(color = Color(0xFF4A4B4D), thickness = 1.dp)
+    }
+}
+
+// ========================================== BUDGET PAGE ==========================================
+
+@Composable
+fun AppBudgetPage(
+    navController: NavController,
+    viewModel: TransactionViewModel = viewModel()
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    val goals by viewModel.goalsFlow.collectAsState(initial = emptyList())
+    val currency by viewModel.currencyFlow.collectAsState()
+
+    Box(modifier = Modifier.fillMaxSize().background(BackgroundColor).padding(horizontal = 20.dp)) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            HeaderBudgetPage(viewModel)
+            if (goals.isEmpty()) {
+                Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Text("No goals set yet.", color = Color.Gray, fontSize = 16.sp)
+                    Text("Tap '+' to create a savings goal.", color = Color.Gray, fontSize = 16.sp, modifier = Modifier.padding(top = 8.dp))
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(top = 16.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(goals, key = { it.id }) { goal ->
+                        GoalCard(goal = goal, currency = currency, onClick = { navController.navigate("GoalDetailPage/${goal.id}") })
+                    }
+                }
+            }
+        }
+        FloatingActionButton(
+            onClick = { showAddDialog = true },
+            containerColor = Color(0xFF67D38B),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 20.dp)
+        ) {
+            Text("+", color = Color.White, fontSize = 24.sp)
+        }
+        if (showAddDialog) {
+            AddGoalDialog(
+                onDismiss = { showAddDialog = false },
+                onAddGoal = { goal -> viewModel.addGoal(goal); showAddDialog = false },
+                currencySymbol = currency.symbol
+            )
+        }
+    }
+}
+
+@Composable
+fun HeaderBudgetPage(viewModel: TransactionViewModel = viewModel()) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 44.dp, start = 0.dp, end = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Savings & Goals",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 30.sp
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CurrencySelector(viewModel)
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = { /* действие */ },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.profile),
+                        contentDescription = "Профиль",
+                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GoalCard(goal: GoalItem, currency: AppCurrency, onClick: () -> Unit) {
+    val targetColor = Color(android.graphics.Color.parseColor(goal.colorHex))
+    val progress = (goal.savedAmount / goal.targetAmount).toFloat().coerceIn(0f, 1f)
+
+    // Конвертация
+    val savedDisplay = goal.savedAmount * currency.rateToEuro
+    val targetDisplay = goal.targetAmount * currency.rateToEuro
+
+    val daysInfo = remember(goal.deadline, goal.id) {
+        val start = Instant.ofEpochMilli(goal.id)
+        val end = Instant.ofEpochMilli(goal.deadline)
+        val now = Instant.now()
+        val totalDays = Duration.between(start, end).toDays().coerceAtLeast(1)
+        val elapsedDays = Duration.between(start, now).toDays().coerceAtLeast(0)
+        Pair(totalDays, elapsedDays)
+    }
+
+    val requiredPace = targetDisplay / daysInfo.first
+    val shouldHaveSaved = requiredPace * daysInfo.second
+    val deviation = savedDisplay - shouldHaveSaved
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF4D4F52))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Icon(painterResource(id = goal.iconRes), contentDescription = goal.name, modifier = Modifier.size(32.dp), tint = targetColor)
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(goal.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("Deadline: ${SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(goal.deadline))}", color = Color.LightGray, fontSize = 12.sp)
+                }
+                Text("${currency.symbol}${"%,.2f".format(deviation)}", color = if (deviation >= 0) Color(0xFF67D38B) else Color(0xFFF44336), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            LinearProgressIndicator(
+                progress = progress,
+                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                color = targetColor,
+                trackColor = Color(0xAA2E3033),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("${currency.symbol}${"%,.2f".format(savedDisplay)} / ${currency.symbol}${"%,.2f".format(targetDisplay)}", color = Color.LightGray, fontSize = 14.sp, modifier = Modifier.align(Alignment.End))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddGoalDialog(
+    onDismiss: () -> Unit,
+    onAddGoal: (GoalItem) -> Unit,
+    currencySymbol: String
+) {
+    var name by remember { mutableStateOf("") }
+    var amount by remember { mutableStateOf("") }
+    var periodValue by remember { mutableStateOf("") }
+    val periodUnits = listOf("Days", "Weeks", "Months", "Years")
+    var selectedUnit by remember { mutableStateOf("Months") }
+    var expandedUnit by remember { mutableStateOf(false) }
+    var selectedColorName by remember { mutableStateOf(GoalColors.keys.first()) }
+    var expandedColor by remember { mutableStateOf(false) }
+    val selectedColor = GoalColors[selectedColorName] ?: Color.Gray
+    var selectedIconName by remember { mutableStateOf(GoalIcons.keys.first()) }
+    var expandedIcon by remember { mutableStateOf(false) }
+    val selectedIconRes = GoalIcons[selectedIconName] ?: android.R.drawable.ic_menu_help
+    var isError by remember { mutableStateOf(false) }
+
+    val deadlineDate = remember(periodValue, selectedUnit) {
+        val calendar = Calendar.getInstance()
+        val value = periodValue.toIntOrNull() ?: 1
+        val field = when (selectedUnit) {
+            "Days" -> Calendar.DAY_OF_YEAR
+            "Weeks" -> Calendar.WEEK_OF_YEAR
+            "Months" -> Calendar.MONTH
+            "Years" -> Calendar.YEAR
+            else -> Calendar.MONTH
+        }
+        calendar.add(field, value)
+        calendar.timeInMillis
+    }
+    val formattedDeadline = remember(deadlineDate) { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(deadlineDate)) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = BackgroundColor,
+        title = { Text("New Savings Goal", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it; isError = false },
+                    label = { Text("Goal Name", color = Color.LightGray) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = Color.White),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = selectedColor, unfocusedBorderColor = Color.Gray, focusedLabelColor = selectedColor, cursorColor = selectedColor)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = amount, onValueChange = { if (it.all { char -> char.isDigit() || char == '.' }) { amount = it; isError = false } },
+                    label = { Text("Target Amount ($currencySymbol)", color = Color.LightGray) },
+                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = Color.White),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = selectedColor, unfocusedBorderColor = Color.Gray, focusedLabelColor = selectedColor, cursorColor = selectedColor)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = periodValue, onValueChange = { if (it.all { char -> char.isDigit() }) periodValue = it },
+                        label = { Text("Duration", color = Color.LightGray) },
+                        placeholder = { Text("1", color = Color.Gray) },
+                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        textStyle = TextStyle(color = Color.White),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = selectedColor, unfocusedBorderColor = Color.Gray, focusedLabelColor = selectedColor, cursorColor = selectedColor)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = selectedUnit, onValueChange = {}, readOnly = true,
+                            label = { Text("Unit", color = Color.LightGray) },
+                            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null, tint = Color.White) },
+                            modifier = Modifier.fillMaxWidth().clickable { expandedUnit = true },
+                            enabled = false, textStyle = TextStyle(color = Color.White),
+                            colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = Color.Gray, disabledLabelColor = Color.LightGray)
+                        )
+                        DropdownMenu(expanded = expandedUnit, onDismissRequest = { expandedUnit = false }, modifier = Modifier.background(Color(0xFF424242))) {
+                            periodUnits.forEach { unit -> DropdownMenuItem(text = { Text(unit, color = Color.White) }, onClick = { selectedUnit = unit; expandedUnit = false }) }
+                        }
+                    }
+                }
+                Text("Deadline: $formattedDeadline", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.align(Alignment.Start).padding(top = 4.dp, start = 4.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = selectedColorName, onValueChange = {}, readOnly = true,
+                            label = { Text("Color", color = Color.LightGray) },
+                            leadingIcon = { Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(selectedColor).border(1.dp, Color.White, CircleShape)) },
+                            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null, tint = Color.White) },
+                            modifier = Modifier.fillMaxWidth().clickable { expandedColor = true },
+                            enabled = false, textStyle = TextStyle(color = Color.White),
+                            colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = Color.Gray, disabledLabelColor = Color.LightGray, disabledLeadingIconColor = Color.Unspecified)
+                        )
+                        DropdownMenu(expanded = expandedColor, onDismissRequest = { expandedColor = false }, modifier = Modifier.background(Color(0xFF424242))) {
+                            GoalColors.forEach { (name, color) -> DropdownMenuItem(text = { Text(name, color = Color.White) }, leadingIcon = { Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(color)) }, onClick = { selectedColorName = name; expandedColor = false }) }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = selectedIconName, onValueChange = {}, readOnly = true,
+                            label = { Text("Icon", color = Color.LightGray) },
+                            leadingIcon = { Icon(painterResource(id = selectedIconRes), null, modifier = Modifier.size(24.dp), tint = selectedColor) },
+                            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null, tint = Color.White) },
+                            modifier = Modifier.fillMaxWidth().clickable { expandedIcon = true },
+                            enabled = false, textStyle = TextStyle(color = Color.White),
+                            colors = OutlinedTextFieldDefaults.colors(disabledTextColor = Color.White, disabledBorderColor = Color.Gray, disabledLabelColor = Color.LightGray, disabledLeadingIconColor = selectedColor)
+                        )
+                        DropdownMenu(expanded = expandedIcon, onDismissRequest = { expandedIcon = false }, modifier = Modifier.background(Color(0xFF424242))) {
+                            GoalIcons.forEach { (name, resId) -> DropdownMenuItem(text = { Text(name, color = Color.White) }, leadingIcon = { Icon(painterResource(id = resId), null, tint = Color.White, modifier = Modifier.size(24.dp)) }, onClick = { selectedIconName = name; expandedIcon = false }) }
+                        }
+                    }
+                }
+                if (isError) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Please enter a valid name and amount", color = Color(0xFFF44336), fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val validAmount = amount.toDoubleOrNull()
+                    if (name.isBlank() || validAmount == null || validAmount <= 0) {
+                        isError = true
+                    } else {
+                        val hexColor = "#" + Integer.toHexString(selectedColor.toArgb()).uppercase()
+                        val newGoal = GoalItem(name = name, targetAmount = validAmount, deadline = deadlineDate, colorHex = hexColor, iconRes = selectedIconRes, periodUnit = selectedUnit)
+                        onAddGoal(newGoal)
+                        onDismiss()
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = selectedColor),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Create", color = Color.White, fontSize = 16.sp) }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.Gray),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Cancel") }
+        }
+    )
+}
+@Composable
+fun GoalDetailPage(
+    navController: NavController,
+    goalId: Long,
+    viewModel: TransactionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+) {
+    val goals by viewModel.goalsFlow.collectAsState()
+    val goal = goals.find { it.id == goalId }
+    val currency by viewModel.currencyFlow.collectAsState()
+    var amountInput by remember { mutableStateOf("") }
+
+    if (goal == null) {
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF2E3033)), contentAlignment = Alignment.Center) {
+            Text("Goal not found", color = Color.Gray)
+        }
+        return
+    }
+
+    val targetColor = Color(android.graphics.Color.parseColor(goal.colorHex))
+    val progress = (goal.savedAmount / goal.targetAmount).toFloat().coerceIn(0f, 1f)
+
+    // Конвертация
+    val savedDisplay = goal.savedAmount * currency.rateToEuro
+    val targetDisplay = goal.targetAmount * currency.rateToEuro
+
+    Column(
+        modifier = Modifier.fillMaxSize().background(Color(0xFF2E3033)).padding(20.dp).verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("◄ Back", color = Color.Gray, modifier = Modifier.clickable { navController.popBackStack() }, fontSize = 16.sp)
+        }
+        Spacer(modifier = Modifier.height(40.dp))
+        Icon(painter = painterResource(id = goal.iconRes), contentDescription = null, modifier = Modifier.size(80.dp), tint = targetColor)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(goal.name, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(32.dp))
+        Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = CardBackground), modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Saved", color = Color.Gray)
+                    Text("${(progress * 100).toInt()}%", color = targetColor, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(6.dp)),
+                    color = targetColor,
+                    trackColor = BackgroundColor,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                    Text("${currency.symbol}${"%,.2f".format(savedDisplay)}", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("/ ${currency.symbol}${"%,.0f".format(targetDisplay)}", color = Color.Gray, fontSize = 16.sp, modifier = Modifier.padding(bottom = 4.dp))
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(40.dp))
+        Text("Manage Funds", color = Color.Gray, modifier = Modifier.align(Alignment.Start))
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = amountInput,
+            onValueChange = { if (it.all { char -> char.isDigit() || char == '.' }) amountInput = it },
+            label = { Text("Amount (${currency.symbol})", color = Color.Gray) },
+            textStyle = TextStyle(color = Color.White, fontSize = 20.sp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = targetColor, unfocusedBorderColor = Color.Gray, cursorColor = targetColor)
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Button(
+                onClick = {
+                    val amount = amountInput.toDoubleOrNull() ?: 0.0
+                    if (amount > 0) {
+                        viewModel.updateGoalAmount(goalId, -amount)
+                        amountInput = ""
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = ExpenseColor),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.weight(1f).height(56.dp)
+            ) {
+                Icon(painterResource(id = R.drawable.transactionsicon), contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Withdraw", fontSize = 16.sp)
+            }
+            Button(
+                onClick = {
+                    val amount = amountInput.toDoubleOrNull() ?: 0.0
+                    if (amount > 0) {
+                        viewModel.updateGoalAmount(goalId, amount)
+                        amountInput = ""
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = colorOliveLight),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.weight(1f).height(56.dp)
+            ) {
+                Icon(painterResource(id = R.drawable.budgeticon), contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Deposit", fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun FooterItem(navController: NavController, route: String, iconRes: Int, width: androidx.compose.ui.unit.Dp) {
+    Box(
+        modifier = Modifier
+            .size(width, 66.dp)
+            .clickable { navController.navigate(route) },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = route,
+            modifier = Modifier.fillMaxSize(),
+            tint = Color.White
+        )
+    }
+}
+
+// --- ЭТУ ФУНКЦИЮ НУЖНО ВСТАВИТЬ В КОНЕЦ ФАЙЛА MainActivity.kt ---
+
+fun filterTransactionsByPeriod(transactions: List<TransactionItem>, period: String): List<TransactionItem> {
+    val now = LocalDate.now()
+    val zoneId = ZoneId.systemDefault()
+
+    val startDate = when (period) {
+        "Week" -> now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        "Month" -> now.with(TemporalAdjusters.firstDayOfMonth())
+        "Year" -> now.with(TemporalAdjusters.firstDayOfYear())
+        else -> now
+    }
+
+    // Начало периода (00:00)
+    val startMillis = startDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+
+    // Конец периода (для фильтрации "текущий месяц" берем до конца текущего дня или до конца месяца - логика "все транзакции ПОСЛЕ начала")
+    // В данном случае мы просто берем все транзакции, дата которых больше или равна startMillis
+
+    return transactions.filter { it.date >= startMillis }
+}
+
+// --- ВСТАВИТЬ В КОНЕЦ MainActivity.kt ---
+
 fun getCategoryIcon(category: String): Int? {
     return when (category) {
         "Supermarket" -> R.drawable.groserries
@@ -1431,607 +1493,59 @@ fun getCategoryIcon(category: String): Int? {
     }
 }
 @Composable
-fun OverspentRow(category: String, amount: Double, iconRes: Int?) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // 1. Icon (Tinted Red)
-            if (iconRes != null) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = category,
-                    modifier = Modifier.size(32.dp),
-                    tint = Coral // Red tint
-                )
-            } else {
-                // Fallback circle if no icon found
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Coral)
-                )
-            }
+fun ReportProgressBar(spent: Double, limit: Double) {
+    val overspent = max(0.0, spent - limit)
+    val isOverspent = spent > limit
 
-            Spacer(modifier = Modifier.width(16.dp))
+    // Вычисляем веса для отображения (зеленая и красная части)
+    val totalProgressBase = if (isOverspent) spent else limit
+    val limitWeight = if (limit > 0) min(1f, (limit / totalProgressBase).toFloat()) else 0f
+    val overspentWeight = if (overspent > 0) (overspent / totalProgressBase).toFloat() else 0f
 
-            // 2. Text "Overspent by: €..."
-            Text(
-                text = "Overspent by: €${"%.2f".format(amount)}",
-                color = Coral, // Red Text
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
+    // Прогресс для обычного случая (без перерасхода)
+    val progress = if (limit > 0) (spent / limit).toFloat() else 0f
 
-        // 3. Small underline separator for each item
-        Spacer(modifier = Modifier.height(8.dp))
-        Divider(color = Color(0xFF4A4B4D), thickness = 1.dp)
-    }
-}
-
-//==========================================BudgetPage==========================================
-@Composable
-fun AppBudgetPage(
-    navController: NavController,
-    viewModel: TransactionViewModel = viewModel()
-) {
-    var showAddDialog by remember { mutableStateOf(false) }
-    // Собираем Flow целей как State
-    val goals by viewModel.goalsFlow.collectAsState(initial = emptyList())
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF2E3033)) // Основной темный фон
-            .padding(horizontal = 20.dp)
-    ) {
-        // Контент: Список целей
-        Column(modifier = Modifier.fillMaxSize()) {
-            HeaderBudgetPage() // Переиспользуем заголовок
-
-            if (goals.isEmpty()) {
-                // Сообщение при отсутствии целей
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("No goals set yet.", color = Color.Gray, fontSize = 16.sp)
-                    Text("Tap '+' to create a savings goal.", color = Color.Gray, fontSize = 16.sp, modifier = Modifier.padding(top = 8.dp))
-                }
-            } else {
-                // Список целей
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(top = 16.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp), // Отступ для FAB
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    items(goals, key = { it.id }) { goal ->
-                        GoalCard(goal = goal, onClick = {
-                            // TODO: Здесь будет логика для просмотра/пополнения цели
-                            println("Goal clicked: ${goal.name}")
-                        })
-                    }
-                }
-            }
-        }
-
-        // FAB (Кнопка добавления)
-        FloatingActionButton(
-            onClick = { showAddDialog = true },
-            containerColor = Color(0xFF67D38B), // Фирменный зеленый
+    if (!isOverspent && limit > 0) {
+        // Случай 1: Траты в пределах лимита
+        LinearProgressIndicator(
+            progress = { progress },
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(20.dp)
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            color = colorOliveLight,
+            trackColor = Color(0x884D4F52)
+        )
+    } else if (isOverspent) {
+        // Случай 2: Перерасход (составной бар)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0x884D4F52))
         ) {
-            Text("+", color = Color.White, fontSize = 24.sp)
-        }
-
-        // Диалог добавления
-        if (showAddDialog) {
-            AddGoalDialog(
-                onDismiss = { showAddDialog = false },
-                onAddGoal = { goal ->
-                    viewModel.addGoal(goal)
-                    showAddDialog = false
-                }
-            )
-        }
-    }
-}
-
-
-@Composable
-fun HeaderBudgetPage(){
-    // Header (Внутренний контейнер, задающий отступы)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            // Установка отступов: сверху (top) 44.dp, по бокам (start/end) 20.dp.
-            .padding(top = 44.dp, start = 0.dp, end = 0.dp)
-    ) {
-        Row( // Горизонтальный макет для размещения элементов в одну строку
-            modifier = Modifier.fillMaxWidth(),
-            // Распределение: 'SpaceBetween' гарантирует, что логотип и профиль будут прижаты к противоположным краям.
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Savings & Goals",
-                color = Color.White,
-                fontWeight = FontWeight.Bold, // Добавим жирный шрифт
-                fontSize = 30.sp
-            )
-
-            // Профиль (Используем заглушку R.drawable.profile)
-            IconButton(
-                onClick = { /* действие */ },
-                modifier = Modifier.size(48.dp)
-            ) {
-                // Иконка профиля - предполагаем, что ресурс R.drawable.profile существует
-                Icon(
-                    painter = painterResource(id = R.drawable.profile),
-                    contentDescription = "Профиль",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape),
-                    tint = Color.White
-                )
-            }
-
-        }
-    }
-}
-
-@Composable
-fun GoalCard(goal: GoalItem, onClick: () -> Unit) {
-
-    // 1. Расчет темпа накопления (Saving Pace Logic)
-    val targetColor = Color(android.graphics.Color.parseColor(goal.colorHex))
-    val targetAmount = goal.targetAmount
-    val savedAmount = goal.savedAmount
-
-    // Переводим Long в Temporal для расчетов
-    // ID используется как дата создания
-    val deadlineInstant = Instant.ofEpochMilli(goal.deadline)
-    val startInstant = Instant.ofEpochMilli(goal.id)
-    val nowInstant = Instant.now()
-
-    // Полный срок в днях
-    val totalDurationDays = Duration.between(startInstant, deadlineInstant).toDays().toDouble().coerceAtLeast(1.0)
-
-    // Сколько времени прошло (в днях)
-    val elapsedDurationDays = Duration.between(startInstant, nowInstant).toDays().toDouble().coerceAtLeast(0.0)
-
-    // Ежедневный необходимый темп накопления
-    val requiredDailyPace = targetAmount / totalDurationDays
-
-    // Требуемая сумма на текущий момент
-    val requiredSavedAmount = requiredDailyPace * elapsedDurationDays
-
-    // Отклонение от темпа (отрицательное — отставание, положительное — опережение)
-    val paceDeviation = savedAmount - requiredSavedAmount
-
-    // Форматирование
-    val paceFormatted = "€${"%,.2f".format(paceDeviation)}"
-    val amountFormatted = "€${"%,.2f".format(savedAmount)} / €${"%,.2f".format(targetAmount)}"
-
-    // Прогресс
-    val progress = (savedAmount / targetAmount).toFloat().coerceIn(0f, 1f)
-
-    // 2. Визуальные элементы
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp) // Уменьшим вертикальный отступ для плотного списка
-            .clickable(onClick = onClick), // Делаем карточку кликабельной
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF4D4F52)) // Темно-серый
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Иконка
-                Icon(
-                    painter = painterResource(id = goal.iconRes),
-                    contentDescription = goal.name,
-                    modifier = Modifier.size(32.dp),
-                    tint = targetColor // Цвет иконки
-                )
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                // Название и дата
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = goal.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text(
-                        text = "Deadline: ${SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(goal.deadline))}",
-                        color = Color.LightGray,
-                        fontSize = 12.sp
-                    )
-                }
-
-                // Темп накопления (Pace Deviation)
-                Text(
-                    text = paceFormatted,
-                    color = if (paceDeviation >= 0) Color(0xFF67D38B) else Color(0xFFF44336), // Зеленый или Красный
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Progress Bar
-            LinearProgressIndicator(
-                progress = progress,
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = targetColor, // Цвет прогресс-бара
-                trackColor = Color(0xAA2E3033) // Более темный трек
+                    .weight(limitWeight)
+                    .fillMaxHeight()
+                    .background(colorOliveLight)
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Суммы
-            Text(
-                text = amountFormatted,
-                color = Color.LightGray,
-                fontSize = 14.sp,
-                modifier = Modifier.align(Alignment.End)
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddGoalDialog(
-    onDismiss: () -> Unit,
-    onAddGoal: (GoalItem) -> Unit
-) {
-    // --- Состояния полей ввода ---
-    var name by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var periodValue by remember { mutableStateOf("") } // Срок (число)
-
-    // --- Состояния выпадающих списков ---
-    val periodUnits = listOf("Days", "Weeks", "Months", "Years")
-    var selectedUnit by remember { mutableStateOf("Months") }
-    var expandedUnit by remember { mutableStateOf(false) }
-
-    // Выбор цвета (по умолчанию первый из карты)
-    var selectedColorName by remember { mutableStateOf(GoalColors.keys.first()) }
-    var expandedColor by remember { mutableStateOf(false) }
-    val selectedColor = GoalColors[selectedColorName] ?: Color.Gray
-
-    // Выбор иконки (по умолчанию первая из карты)
-    var selectedIconName by remember { mutableStateOf(GoalIcons.keys.first()) }
-    var expandedIcon by remember { mutableStateOf(false) }
-    val selectedIconRes = GoalIcons[selectedIconName] ?: android.R.drawable.ic_menu_help
-
-    // Ошибка валидации
-    var isError by remember { mutableStateOf(false) }
-
-    // --- Логика расчета дедлайна ---
-    val deadlineDate = remember(periodValue, selectedUnit) {
-        val calendar = Calendar.getInstance()
-        val value = periodValue.toIntOrNull()
-
-        // Если срок не введен, берем 1 год по умолчанию
-        val duration = value ?: 1
-        // Единица измерения
-        val field = when (selectedUnit) {
-            "Days" -> Calendar.DAY_OF_YEAR
-            "Weeks" -> Calendar.WEEK_OF_YEAR
-            "Months" -> Calendar.MONTH
-            "Years" -> Calendar.YEAR
-            else -> Calendar.MONTH
-        }
-
-        calendar.add(field, duration)
-        calendar.timeInMillis
-    }
-
-    val formattedDeadline = remember(deadlineDate) {
-        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(deadlineDate))
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Color(0xFF2E3033), // Темный фон диалога
-        title = {
-            Text(
-                text = "New Savings Goal",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-        },
-        text = {
-            Column(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()), // Скролл для маленьких экранов
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                // 1. Название цели
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it; isError = false },
-                    label = { Text("Goal Name", color = Color.LightGray) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(color = Color.White),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = selectedColor as Color,
-                        unfocusedBorderColor = Color.Gray,
-                        focusedLabelColor = selectedColor,
-                        cursorColor = selectedColor
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 2. Сумма
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = {
-                        // Разрешаем только цифры и точку
-                        if (it.all { char -> char.isDigit() || char == '.' }) {
-                            amount = it
-                            isError = false
-                        }
-                    },
-                    label = { Text("Target Amount (€)", color = Color.LightGray) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(color = Color.White),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = selectedColor,
-                        unfocusedBorderColor = Color.Gray,
-                        focusedLabelColor = selectedColor,
-                        cursorColor = selectedColor
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 3. Срок и Единицы измерения (в одну строку)
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Поле ввода числа (необязательно)
-                    OutlinedTextField(
-                        value = periodValue,
-                        onValueChange = {
-                            if (it.all { char -> char.isDigit() }) periodValue = it
-                        },
-                        label = { Text("Duration", color = Color.LightGray) },
-                        placeholder = { Text("1", color = Color.Gray) }, // Подсказка по умолчанию
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(color = Color.White),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = selectedColor,
-                            unfocusedBorderColor = Color.Gray,
-                            focusedLabelColor = selectedColor,
-                            cursorColor = selectedColor
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Выбор единиц (Days, Weeks, ...)
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = selectedUnit,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Unit", color = Color.LightGray) },
-                            trailingIcon = {
-                                Icon(
-                                    imageVector = Icons.Filled.ArrowDropDown,
-                                    contentDescription = null,
-                                    tint = Color.White
-                                )
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { expandedUnit = true },
-                            enabled = false, // Отключаем стандартный ввод, используем клик по Box/Icon
-                            textStyle = TextStyle(color = Color.White),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = Color.White,
-                                disabledBorderColor = Color.Gray,
-                                disabledLabelColor = Color.LightGray
-                            )
-                        )
-                        DropdownMenu(
-                            expanded = expandedUnit,
-                            onDismissRequest = { expandedUnit = false },
-                            modifier = Modifier.background(Color(0xFF424242))
-                        ) {
-                            periodUnits.forEach { unit ->
-                                DropdownMenuItem(
-                                    text = { Text(unit, color = Color.White) },
-                                    onClick = {
-                                        selectedUnit = unit
-                                        expandedUnit = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Подсказка о дате
-                Text(
-                    text = "Deadline: $formattedDeadline",
-                    color = Color.Gray,
-                    fontSize = 12.sp,
-                    modifier = Modifier.align(Alignment.Start).padding(top = 4.dp, start = 4.dp)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 4. Выбор Цвета и Иконки
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // --- Выбор Цвета ---
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = selectedColorName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Color", color = Color.LightGray) },
-                            leadingIcon = {
-                                Box(
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clip(CircleShape)
-                                        .background(selectedColor)
-                                        .border(1.dp, Color.White, CircleShape)
-                                )
-                            },
-                            trailingIcon = {
-                                Icon(Icons.Filled.ArrowDropDown, null, tint = Color.White)
-                            },
-                            modifier = Modifier.fillMaxWidth().clickable { expandedColor = true },
-                            enabled = false,
-                            textStyle = TextStyle(color = Color.White),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = Color.White,
-                                disabledBorderColor = Color.Gray,
-                                disabledLabelColor = Color.LightGray,
-                                disabledLeadingIconColor = Color.Unspecified
-                            )
-                        )
-                        DropdownMenu(
-                            expanded = expandedColor,
-                            onDismissRequest = { expandedColor = false },
-                            modifier = Modifier.background(Color(0xFF424242))
-                        ) {
-                            GoalColors.forEach { (name, color) ->
-                                DropdownMenuItem(
-                                    text = { Text(name, color = Color.White) },
-                                    leadingIcon = {
-                                        Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(color)) // Ошибка здесь
-                                    },
-                                    onClick = {
-                                        selectedColorName = name
-                                        expandedColor = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // --- Выбор Иконки ---
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = selectedIconName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Icon", color = Color.LightGray) },
-                            leadingIcon = {
-                                Icon(
-                                    painter = painterResource(id = selectedIconRes),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = selectedColor
-                                )
-                            },
-                            trailingIcon = {
-                                Icon(Icons.Filled.ArrowDropDown, null, tint = Color.White)
-                            },
-                            modifier = Modifier.fillMaxWidth().clickable { expandedIcon = true },
-                            enabled = false,
-                            textStyle = TextStyle(color = Color.White),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = Color.White,
-                                disabledBorderColor = Color.Gray,
-                                disabledLabelColor = Color.LightGray,
-                                disabledLeadingIconColor = selectedColor
-                            )
-                        )
-                        DropdownMenu(
-                            expanded = expandedIcon,
-                            onDismissRequest = { expandedIcon = false },
-                            modifier = Modifier.background(Color(0xFF424242))
-                        ) {
-                            GoalIcons.forEach { (name, resId) ->
-                                DropdownMenuItem(
-                                    text = { Text(name, color = Color.White) },
-                                    leadingIcon = {
-                                        Icon(painterResource(id = resId), null, tint = Color.White, modifier = Modifier.size(24.dp))
-                                    },
-                                    onClick = {
-                                        selectedIconName = name
-                                        expandedIcon = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (isError) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Please enter a valid name and amount", color = Color(0xFFF44336), fontSize = 12.sp)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val validAmount = amount.toDoubleOrNull()
-                    if (name.isBlank() || validAmount == null || validAmount <= 0) {
-                        isError = true
-                    } else {
-                        // Преобразование Color в HEX String (#AARRGGBB)
-                        val hexColor = "#" + Integer.toHexString(selectedColor.toArgb()).uppercase()
-
-                        val newGoal = GoalItem(
-                            name = name,
-                            targetAmount = validAmount,
-                            deadline = deadlineDate,
-                            colorHex = hexColor,
-                            iconRes = selectedIconRes,
-                            periodUnit = selectedUnit
-                        )
-                        onAddGoal(newGoal)
-                        onDismiss()
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = selectedColor),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Create", color = Color.White, fontSize = 16.sp)
-            }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.Gray),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Cancel")
-            }
+                    .weight(overspentWeight)
+                    .fillMaxHeight()
+                    .background(Coral)
+            )
         }
-    )
+    } else {
+        // Случай 3: Пустой (лимит 0 или трат нет)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0x884D4F52))
+        )
+    }
 }

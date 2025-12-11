@@ -155,3 +155,12 @@ suspend fun updateGoal(context: Context, updatedGoal: GoalItem) {
         prefs[GOALS_KEY] = Json.encodeToString(list)
     }
 }
+enum class AppCurrency(val code: String, val symbol: String, val rateToEuro: Double) {
+    EUR("EUR", "€", 1.0),
+    USD("USD", "$", 1.05), // 1 Евро = 1.05 Доллара
+    RUB("RUB", "₽", 105.0), // 1 Евро = 105 Рублей
+    GBP("GBP", "£", 0.85)
+}
+
+// Ключ для сохранения выбранной валюты
+val CURRENCY_KEY = androidx.datastore.preferences.core.stringPreferencesKey("selected_currency")
