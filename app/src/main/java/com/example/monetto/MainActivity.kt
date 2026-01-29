@@ -51,6 +51,9 @@ import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 import android.graphics.Color as AndroidColor
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 
 // Константы цветов
 private val BackgroundColor = Color(0xFF2E3033)
@@ -116,7 +119,7 @@ fun CurrencySelector(viewModel: TransactionViewModel) {
     val currentCurrency by viewModel.currencyFlow.collectAsState()
     var expanded by remember { mutableStateOf(false) }
 
-    Box {
+    Box(modifier = Modifier.testTag("currency_selector")) {
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
@@ -1442,12 +1445,14 @@ fun FooterItem(navController: NavController, route: String, iconRes: Int, width:
     Box(
         modifier = Modifier
             .size(width, 66.dp)
-            .clickable { navController.navigate(route) },
+            .clickable { navController.navigate(route) }
+            // ДОБАВЬТЕ ЭТУ СТРОКУ ДЛЯ ТЕСТОВ:
+            .semantics { contentDescription = route },
         contentAlignment = Alignment.Center
     ) {
         Icon(
             painter = painterResource(id = iconRes),
-            contentDescription = route,
+            contentDescription = route, // Это уже есть, тест будет искать по этому полю
             modifier = Modifier.fillMaxSize(),
             tint = Color.White
         )
